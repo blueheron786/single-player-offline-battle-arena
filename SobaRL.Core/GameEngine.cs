@@ -65,10 +65,14 @@ namespace SobaRL.Core
             // Create towers and nexuses
             CreateStructures();
             
-            // Register all units in time system
+            // Register units in time system (exclude nexuses which don't act)
             foreach (var unit in AllUnits)
             {
-                TimeSystem.RegisterUnit(unit);
+                // Only register units that can take actions (exclude nexuses)
+                if (unit.UnitType != UnitType.Nexus)
+                {
+                    TimeSystem.RegisterUnit(unit);
+                }
             }
             
             State = GameState.Playing;

@@ -48,7 +48,7 @@ namespace SobaRL.Core.Models
             CurrentHealth = MaxHealth;
             AttackDamage = 80;
             AttackRange = 3;
-            Speed = 0; // Towers don't move
+            Speed = 10; // Towers can attack but are slow
             MovementRange = 0;
         }
 

@@ -37,7 +37,9 @@ namespace SobaRL.Core.Systems
                 
             // Calculate when this unit can act next based on speed
             // Higher speed = more frequent actions
-            int actionDelay = Math.Max(1, 100 / unit.Speed);
+            // Ensure speed is at least 1 to prevent divide by zero
+            int effectiveSpeed = Math.Max(1, unit.Speed);
+            int actionDelay = Math.Max(1, 100 / effectiveSpeed);
             _unitActionTimes[unit] = _currentTime + actionDelay;
         }
         
