@@ -15,7 +15,7 @@ namespace SobaRL.Core.Champions
                 AttackDamage = 30,
                 AttackRange = 1,
                 Speed = 80, // Slower movement
-                MovementRange = 1,
+                MovementRange = 2, // Allow diagonal movement
                 ManaRegeneration = 2,
                 HealthRegeneration = 3
             };
@@ -38,7 +38,7 @@ namespace SobaRL.Core.Champions
                 AttackDamage = 25,
                 AttackRange = 3,
                 Speed = 90, // Moderate speed
-                MovementRange = 1,
+                MovementRange = 2, // Allow diagonal movement
                 ManaRegeneration = 5,
                 HealthRegeneration = 1
             };

@@ -115,26 +115,12 @@ namespace SobaRL.Game
         {
             var playerChampion = _availableChampions[_selectedChampionIndex];
             
-            // Create all champions for the game
+            // Create all champions for the game - simplified to 1v1
             var allChampions = new List<Champion> { playerChampion };
             
-            // Add AI champions for player team
-            var playerTeamSpawns = new List<Position>
-            {
-                new Position(8, 27),
-                new Position(10, 29)
-            };
-            var aiPlayerChampions = ChampionFactory.CreateRandomTeam(2, Team.Player, playerTeamSpawns);
-            allChampions.AddRange(aiPlayerChampions);
-            
-            // Add enemy team champions
-            var enemyTeamSpawns = new List<Position>
-            {
-                new Position(61, 7),
-                new Position(59, 9),
-                new Position(57, 11)
-            };
-            var enemyChampions = ChampionFactory.CreateRandomTeam(3, Team.Enemy, enemyTeamSpawns);
+            // Add just ONE enemy champion for 1v1 combat
+            var enemySpawnPos = new Position(61, 7);
+            var enemyChampions = ChampionFactory.CreateRandomTeam(1, Team.Enemy, new List<Position> { enemySpawnPos });
             allChampions.AddRange(enemyChampions);
 
             _gameEngine.StartGame(playerChampion, allChampions);
@@ -201,12 +187,10 @@ namespace SobaRL.Game
                     {
                         color = displayChar switch
                         {
-                            'T' => SadRogue.Primitives.Color.Gray,
-                            'N' => SadRogue.Primitives.Color.Purple,
-                            '-' => SadRogue.Primitives.Color.DarkGray,
-                            '#' => SadRogue.Primitives.Color.Green,
-                            '█' => SadRogue.Primitives.Color.DarkRed,
-                            _ => SadRogue.Primitives.Color.DarkGray
+                            '#' => SadRogue.Primitives.Color.Gray,      // Walls
+                            '~' => SadRogue.Primitives.Color.Blue,      // River
+                            '.' => SadRogue.Primitives.Color.DarkGray,  // Ground
+                            _ => SadRogue.Primitives.Color.White
                         };
                     }
                     

@@ -62,8 +62,8 @@ namespace SobaRL.Core
             // Place champions on the map
             PlaceChampions();
             
-            // Create towers and nexuses
-            CreateStructures();
+            // SIMPLIFIED: Skip towers and nexuses for pure champion combat
+            // CreateStructures();
             
             // Register units in time system (exclude nexuses which don't act)
             foreach (var unit in AllUnits)
@@ -213,6 +213,9 @@ namespace SobaRL.Core
                 return true;
             }
             
+            // Debug: Why can't we move?
+            OnGameMessage?.Invoke($"[DEBUG] {unit.Name} can't move to {targetPosition}: Valid={Map.IsValidPosition(targetPosition)}, Empty={Map.IsPositionEmpty(targetPosition)}, Distance={unit.Position.ManhattanDistanceTo(targetPosition)}, MaxRange={unit.MovementRange}");
+            
             return false;
         }
 
@@ -275,13 +278,13 @@ namespace SobaRL.Core
                 champion.UpdateRespawn();
             }
 
-            // Spawn minions periodically
-            _minionSpawnTimer++;
-            if (_minionSpawnTimer >= MINION_SPAWN_INTERVAL)
-            {
-                SpawnMinions();
-                _minionSpawnTimer = 0;
-            }
+            // SIMPLIFIED: Skip minion spawning for pure champion combat
+            // _minionSpawnTimer++;
+            // if (_minionSpawnTimer >= MINION_SPAWN_INTERVAL)
+            // {
+            //     SpawnMinions();
+            //     _minionSpawnTimer = 0;
+            // }
 
             // Check win conditions
             CheckWinConditions();

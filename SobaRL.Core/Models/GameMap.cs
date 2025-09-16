@@ -62,33 +62,109 @@ namespace SobaRL.Core.Models
 
         private void GenerateThreeLaneMap()
         {
-            // Create DOTA-style map: square path with diagonal
-            // Player base at bottom-left corner, enemy base at top-right corner
+            // Simple map: ground (.), walls (#), and river (~) from top-left to bottom-right
+            // Player at bottom-left, enemy at top-right
             
-            PlayerNexusPosition = new Position(8, Height - 8);
-            EnemyNexusPosition = new Position(Width - 8, 7);
+            PlayerNexusPosition = new Position(5, Height - 5);
+            EnemyNexusPosition = new Position(Width - 5, 5);
             
-            // Fill map with jungle/trees first
-            FillWithJungle();
+            // Fill everything with ground first
+            FillWithGround();
             
-            // Create the square path around the perimeter
-            CreateSquarePath();
+            // Add a diagonal river from top-left to bottom-right
+            CreateDiagonalRiver();
             
-            // Create diagonal path from bottom-left to top-right
-            CreateDiagonalPath();
+            // Add some walls around the edges for boundaries
+            CreateBoundaryWalls();
             
-            // Create bases
-            CreateBase(PlayerNexusPosition, Team.Player);
-            CreateBase(EnemyNexusPosition, Team.Enemy);
+            // Setup spawn positions
+            SetupSimpleSpawnPositions();
+        }
+
+        private void FillWithGround()
+        {
+            // Fill entire map with walkable ground
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    Cells[x, y] = new MapCell(CellType.Empty, '.');
+                }
+            }
+        }
+
+        private void CreateDiagonalRiver()
+        {
+            // Create river from top-left (0,0) to bottom-right (Width-1, Height-1)
+            int startX = 0;
+            int startY = 0;
+            int endX = Width - 1;
+            int endY = Height - 1;
             
-            // Add towers along the paths
-            PlaceTowers();
+            // Use Bresenham-like algorithm for diagonal line
+            int dx = Math.Abs(endX - startX);
+            int dy = Math.Abs(endY - startY);
+            int x = startX;
+            int y = startY;
+            int xStep = startX < endX ? 1 : -1;
+            int yStep = startY < endY ? 1 : -1;
+            int error = dx - dy;
             
-            // Create spawn positions
-            SetupSpawnPositions();
+            while (true)
+            {
+                // Make river 2-3 cells wide
+                for (int i = -1; i <= 1; i++)
+                {
+                    int riverX = x + i;
+                    if (IsValidPosition(new Position(riverX, y)))
+                    {
+                        Cells[riverX, y] = new MapCell(CellType.Empty, '~'); // River is walkable
+                    }
+                }
+                
+                if (x == endX && y == endY) break;
+                
+                int error2 = 2 * error;
+                if (error2 > -dy)
+                {
+                    error -= dy;
+                    x += xStep;
+                }
+                if (error2 < dx)
+                {
+                    error += dx;
+                    y += yStep;
+                }
+            }
+        }
+
+        private void CreateBoundaryWalls()
+        {
+            // Add walls around the border
+            for (int x = 0; x < Width; x++)
+            {
+                Cells[x, 0] = new MapCell(CellType.Wall, '#');              // Top wall
+                Cells[x, Height - 1] = new MapCell(CellType.Wall, '#');     // Bottom wall
+            }
             
-            // Add some clearings and strategic empty areas
-            AddStrategicClearings();
+            for (int y = 0; y < Height; y++)
+            {
+                Cells[0, y] = new MapCell(CellType.Wall, '#');              // Left wall
+                Cells[Width - 1, y] = new MapCell(CellType.Wall, '#');      // Right wall
+            }
+        }
+
+        private void SetupSimpleSpawnPositions()
+        {
+            // Clear the lists first
+            PlayerTowerPositions.Clear();
+            EnemyTowerPositions.Clear();
+            PlayerSpawnPositions.Clear();
+            EnemySpawnPositions.Clear();
+            
+            // Simple spawn positions
+            PlayerSpawnPositions.Add(new Position(5, Height - 5));
+            EnemySpawnPositions.Add(new Position(Width - 5, 5));
         }
 
         private void CreateBase(Position nexusPos, Team team)
