@@ -10,32 +10,6 @@ namespace SobaRL.Game
     public class GameScreen : SadConsole.Console
     {
         private GameEngine _gameEngine;
-        private List<Champion> _availableChampions = new();
-        private bool _championSelected = false;
-        private int _selectedChampionIndex = 0;
-        private Queue<string> _messageLog = new Queue<string>();
-        private const int MAX_MESSAGES = 5;
-        
-        // Attack animation system
-        private Dictionary<Position, AttackAnimation> _attackAnimations = new Dictionary<Position, AttackAnimation>();
-
-        private class AttackAnimation
-        {
-            public char Character { get; set; }
-            public SadRogue.Primitives.Color Color { get; set; }
-            public DateTime StartTime { get; set; }
-            public int DurationMs { get; set; }
-            
-            public AttackAnimation(char character, SadRogue.Primitives.Color color, int durationMs = 150)
-            {
-                Character = character;
-                Color = color;
-                StartTime = DateTime.Now;
-                DurationMs = durationMs;
-            }
-            
-            public bool IsExpired => DateTime.Now.Subtract(StartTime).TotalMilliseconds > DurationMs;
-        }
 
         public GameScreen() : base(80, 37)
         {
@@ -43,8 +17,7 @@ namespace SobaRL.Game
             _gameEngine.OnGameMessage += OnGameMessage;
             _gameEngine.OnGameStateChanged += OnGameStateChanged;
 
-            // Create available champions
-            CreateAvailableChampions();
+            // ...existing code...
 
             // Start with champion selection
             ShowChampionSelection();
@@ -57,7 +30,9 @@ namespace SobaRL.Game
         public override void Update(TimeSpan delta)
         {
             base.Update(delta);
-            
+                private ChampionSelector _championSelector = new ChampionSelector();
+                private MessageLog _messageLog = new MessageLog();
+                private AttackAnimationManager _attackAnimationManager = new AttackAnimationManager();
             // Clean up expired animations
             if (_attackAnimations.Count > 0)
             {
@@ -66,7 +41,7 @@ namespace SobaRL.Game
                     .Select(kvp => kvp.Key)
                     .ToList();
                     
-                bool hasExpired = false;
+                    _championSelector.CreateAvailableChampions();
                 foreach (var pos in expiredAnimations)
                 {
                     _attackAnimations.Remove(pos);
@@ -81,23 +56,10 @@ namespace SobaRL.Game
             }
         }
 
-        private void CreateAvailableChampions()
+                    _attackAnimationManager.RemoveExpired();
+                    if (_attackAnimationManager.HasExpiredAnimations && _championSelected)
         {
-            _availableChampions = new List<Champion>
-            {
-                ChampionFactory.CreateTank("Ironwall", new Position(0, 0), Team.Player),
-                ChampionFactory.CreateMage("Arcane", new Position(0, 0), Team.Player),
-                ChampionFactory.CreateAssassin("Shadow", new Position(0, 0), Team.Player)
-            };
-        }
-
-        private void ShowChampionSelection()
-        {
-            this.Clear();
-            this.Print(1, 1, "=== CHAMPION SELECT ===", SadRogue.Primitives.Color.Yellow);
-            this.Print(1, 3, "Choose your champion:");
-
-            for (int i = 0; i < _availableChampions.Count; i++)
+                        UpdateDisplay();
             {
                 var champion = _availableChampions[i];
                 var color = i == _selectedChampionIndex ? SadRogue.Primitives.Color.White : SadRogue.Primitives.Color.Gray;
@@ -107,14 +69,14 @@ namespace SobaRL.Game
                 this.Print(3, 6 + i * 3, $"   HP: {champion.MaxHealth}, MP: {champion.MaxMana}", color);
                 this.Print(3, 7 + i * 3, $"   ATK: {champion.AttackDamage}, SPD: {champion.Speed}", color);
             }
-
+                    for (int i = 0; i < _championSelector.AvailableChampions.Count; i++)
             this.Print(1, 16, "Use UP/DOWN arrows to select, ENTER to confirm", SadRogue.Primitives.Color.Cyan);
-        }
-
-        private void StartGame()
-        {
-            var playerChampion = _availableChampions[_selectedChampionIndex];
-            
+                        var champion = _championSelector.AvailableChampions[i];
+                        var color = i == _championSelector.SelectedChampionIndex ? SadRogue.Primitives.Color.White : SadRogue.Primitives.Color.Gray;
+                        var marker = i == _championSelector.SelectedChampionIndex ? "> " : "  ";
+                        this.Print(1, 5 + i * 3, $"{marker}{i + 1}. {champion.Name} ({champion.Archetype})", color);
+                        this.Print(3, 6 + i * 3, $"   HP: {champion.MaxHealth}, MP: {champion.MaxMana}", color);
+                        this.Print(3, 7 + i * 3, $"   ATK: {champion.AttackDamage}, SPD: {champion.Speed}", color);
             // Create all champions for the game - simplified to 1v1
             var allChampions = new List<Champion> { playerChampion };
             
@@ -122,7 +84,7 @@ namespace SobaRL.Game
             var enemySpawnPos = new Position(61, 7);
             var enemyChampions = ChampionFactory.CreateRandomTeam(1, Team.Enemy, new List<Position> { enemySpawnPos });
             allChampions.AddRange(enemyChampions);
-
+                    var playerChampion = _championSelector.GetSelectedChampion();
             _gameEngine.StartGame(playerChampion, allChampions);
             _championSelected = true;
             
@@ -163,11 +125,14 @@ namespace SobaRL.Game
                     
                     // Check if there's an attack animation at this position
                     if (_attackAnimations.ContainsKey(pos))
-                    {
+                            if (_attackAnimationManager.Contains(pos))
                         var animation = _attackAnimations[pos];
-                        this.SetGlyph(x, y + 1, animation.Character, animation.Color);
-                        continue; // Skip normal rendering for this position
-                    }
+                                var animation = _attackAnimationManager.Get(pos);
+                                if (animation != null)
+                                {
+                                    this.SetGlyph(x, y + 1, animation.Character, animation.Color);
+                                    continue;
+                                }
                     
                     SadRogue.Primitives.Color color = SadRogue.Primitives.Color.White;
                     if (unit != null)
@@ -209,7 +174,7 @@ namespace SobaRL.Game
             int messageStartY = this.Height - 8;
             int messageIndex = 0;
             foreach (var message in _messageLog.Reverse().Take(5))
-            {
+                    foreach (var message in _messageLog.GetRecentMessages(5))
                 if (messageStartY + messageIndex < this.Height - 2)
                 {
                     // Clear the line first
@@ -289,13 +254,13 @@ namespace SobaRL.Game
             if (keyboard.IsKeyPressed(Keys.Up))
             {
                 _selectedChampionIndex = Math.Max(0, _selectedChampionIndex - 1);
-                ShowChampionSelection();
+                        _championSelector.MoveSelectionUp();
                 return true;
             }
             if (keyboard.IsKeyPressed(Keys.Down))
             {
                 _selectedChampionIndex = Math.Min(_availableChampions.Count - 1, _selectedChampionIndex + 1);
-                ShowChampionSelection();
+                        _championSelector.MoveSelectionDown();
                 return true;
             }
             if (keyboard.IsKeyPressed(Keys.Enter))
@@ -311,7 +276,7 @@ namespace SobaRL.Game
         {
             if (_gameEngine.State != GameState.Playing)
             {
-                if (keyboard.IsKeyPressed(Keys.Escape))
+                    _messageLog.Add(message);
                 {
                     Environment.Exit(0);
                 }
@@ -359,12 +324,11 @@ namespace SobaRL.Game
                 _gameEngine.ProcessPlayerAction(action);
                 UpdateDisplay();
                 return true;
-            }
-
-            return false;
-        }
-
-        private Unit? FindNearestEnemy(Champion player)
+                    var random = new Random();
+                    var attackChars = new[] { '/', '\\', '*', '+' };
+                    var attackChar = attackChars[random.Next(attackChars.Length)];
+                    var attackColor = SadRogue.Primitives.Color.Yellow;
+                    _attackAnimationManager.AddAnimation(attackerPos, attackChar, attackColor, 100);
         {
             return _gameEngine.GetUnitsInRange(player.Position, player.AttackRange)
                 .Where(u => u.Team != player.Team && u.IsAlive)
