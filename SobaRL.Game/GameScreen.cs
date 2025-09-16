@@ -15,6 +15,27 @@ namespace SobaRL.Game
         private int _selectedChampionIndex = 0;
         private Queue<string> _messageLog = new Queue<string>();
         private const int MAX_MESSAGES = 5;
+        
+        // Attack animation system
+        private Dictionary<Position, AttackAnimation> _attackAnimations = new Dictionary<Position, AttackAnimation>();
+
+        private class AttackAnimation
+        {
+            public char Character { get; set; }
+            public SadRogue.Primitives.Color Color { get; set; }
+            public DateTime StartTime { get; set; }
+            public int DurationMs { get; set; }
+            
+            public AttackAnimation(char character, SadRogue.Primitives.Color color, int durationMs = 150)
+            {
+                Character = character;
+                Color = color;
+                StartTime = DateTime.Now;
+                DurationMs = durationMs;
+            }
+            
+            public bool IsExpired => DateTime.Now.Subtract(StartTime).TotalMilliseconds > DurationMs;
+        }
 
         public GameScreen() : base(80, 37)
         {
@@ -31,6 +52,33 @@ namespace SobaRL.Game
             // Make this console focused for input
             UseKeyboard = true;
             IsFocused = true;
+        }
+
+        public override void Update(TimeSpan delta)
+        {
+            base.Update(delta);
+            
+            // Clean up expired animations
+            if (_attackAnimations.Count > 0)
+            {
+                var expiredAnimations = _attackAnimations
+                    .Where(kvp => kvp.Value.IsExpired)
+                    .Select(kvp => kvp.Key)
+                    .ToList();
+                    
+                bool hasExpired = false;
+                foreach (var pos in expiredAnimations)
+                {
+                    _attackAnimations.Remove(pos);
+                    hasExpired = true;
+                }
+                
+                // Only update display if animations expired
+                if (hasExpired && _championSelected)
+                {
+                    UpdateDisplay();
+                }
+            }
         }
 
         private void CreateAvailableChampions()
@@ -126,6 +174,14 @@ namespace SobaRL.Game
                     var pos = new Position(x, y);
                     var displayChar = _gameEngine.Map.GetDisplayChar(pos);
                     var unit = _gameEngine.Map.GetUnitAt(pos);
+                    
+                    // Check if there's an attack animation at this position
+                    if (_attackAnimations.ContainsKey(pos))
+                    {
+                        var animation = _attackAnimations[pos];
+                        this.SetGlyph(x, y + 1, animation.Character, animation.Color);
+                        continue; // Skip normal rendering for this position
+                    }
                     
                     SadRogue.Primitives.Color color = SadRogue.Primitives.Color.White;
                     if (unit != null)
@@ -342,11 +398,53 @@ namespace SobaRL.Game
                 _messageLog.Dequeue();
             }
             
+            // Check for attack messages to trigger animations
+            if (message.Contains("attacks") && message.Contains("(bump attack)"))
+            {
+                // Extract attacker name and show animation at their position
+                var parts = message.Split(' ');
+                if (parts.Length > 0)
+                {
+                    var attackerName = parts[0];
+                    var attacker = _gameEngine.AllUnits.FirstOrDefault(u => u.Name == attackerName);
+                    if (attacker != null)
+                    {
+                        ShowAttackAnimation(attacker.Position);
+                    }
+                }
+            }
+            else if (message.Contains("attacked") && !message.Contains("(bump attack)"))
+            {
+                // Regular attack animation
+                var parts = message.Split(' ');
+                if (parts.Length > 2)
+                {
+                    var attackerName = parts[0];
+                    var attacker = _gameEngine.AllUnits.FirstOrDefault(u => u.Name == attackerName);
+                    if (attacker != null)
+                    {
+                        ShowAttackAnimation(attacker.Position);
+                    }
+                }
+            }
+            
             // Update the display to show new message
             if (_championSelected)
             {
                 UpdateDisplay();
             }
+        }
+
+        private void ShowAttackAnimation(Position attackerPos)
+        {
+            // Create attack animation at attacker's position
+            var random = new Random();
+            var attackChars = new[] { '/', '\\', '*', '+' };
+            var attackChar = attackChars[random.Next(attackChars.Length)];
+            var attackColor = SadRogue.Primitives.Color.Yellow;
+            
+            // Short 100ms flicker animation
+            _attackAnimations[attackerPos] = new AttackAnimation(attackChar, attackColor, 100);
         }
 
         private void OnGameStateChanged(GameState newState)
