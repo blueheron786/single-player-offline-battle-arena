@@ -173,12 +173,46 @@ namespace SobaRL.Core
 
         private bool TryMoveUnit(Unit unit, Position targetPosition)
         {
+            // Check if target position is within movement range
+            if (unit.Position.ManhattanDistanceTo(targetPosition) > unit.MovementRange)
+                return false;
+                
+            if (!Map.IsValidPosition(targetPosition))
+                return false;
+            
+            // Check if there's a unit at the target position
+            var targetUnit = Map.GetUnitAt(targetPosition);
+            
+            if (targetUnit != null)
+            {
+                // If it's an enemy, try to attack instead of moving
+                if (targetUnit.Team != unit.Team)
+                {
+                    // For bump attacks, we're moving into the enemy's space, so check if we can attack from current position
+                    if (unit.Position.ManhattanDistanceTo(targetUnit.Position) <= unit.AttackRange)
+                    {
+                        OnGameMessage?.Invoke($"{unit.Name} attacks {targetUnit.Name} (bump attack)!");
+                        return TryAttackUnit(unit, targetUnit);
+                    }
+                    else
+                    {
+                        OnGameMessage?.Invoke($"{unit.Name} can't reach {targetUnit.Name} to attack");
+                        return false;
+                    }
+                }
+                // If it's an ally, movement fails
+                OnGameMessage?.Invoke($"{unit.Name} can't move into {targetUnit.Name}'s space (ally)");
+                return false;
+            }
+            
+            // Normal movement to empty space
             if (unit.CanMoveTo(targetPosition, Map))
             {
                 Map.PlaceUnit(unit, targetPosition);
                 OnGameMessage?.Invoke($"{unit.Name} moved to {targetPosition}");
                 return true;
             }
+            
             return false;
         }
 
@@ -221,11 +255,13 @@ namespace SobaRL.Core
             
             // Process all units that can act this turn
             var readyUnits = TimeSystem.GetUnitsReadyToAct();
+            OnGameMessage?.Invoke($"[TURN] Time: {TimeSystem.CurrentTime}, {readyUnits.Count} units ready to act");
             
             foreach (var unit in readyUnits)
             {
                 if (unit != PlayerChampion && unit.IsAlive)
                 {
+                    OnGameMessage?.Invoke($"[TURN] Processing AI turn for {unit.Name} ({unit.UnitType})");
                     ProcessAITurn(unit);
                     TimeSystem.ConsumeUnitAction(unit);
                 }
@@ -281,14 +317,24 @@ namespace SobaRL.Core
                 // Try to attack if in range
                 if (champion.CanAttack(nearestEnemy))
                 {
+                    OnGameMessage?.Invoke($"[AI] {champion.Name} attacks {nearestEnemy.Name}!");
                     TryAttackUnit(champion, nearestEnemy);
                 }
                 else
                 {
                     // Move towards enemy
                     var targetPos = GetPositionTowardsTarget(champion.Position, nearestEnemy.Position);
-                    TryMoveUnit(champion, targetPos);
+                    OnGameMessage?.Invoke($"[AI] {champion.Name} moves from {champion.Position} towards {targetPos}");
+                    bool moved = TryMoveUnit(champion, targetPos);
+                    if (!moved)
+                    {
+                        OnGameMessage?.Invoke($"[AI] {champion.Name} couldn't move to {targetPos}");
+                    }
                 }
+            }
+            else
+            {
+                OnGameMessage?.Invoke($"[AI] {champion.Name} found no enemies to target");
             }
         }
 

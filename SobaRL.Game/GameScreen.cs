@@ -13,6 +13,8 @@ namespace SobaRL.Game
         private List<Champion> _availableChampions = new();
         private bool _championSelected = false;
         private int _selectedChampionIndex = 0;
+        private Queue<string> _messageLog = new Queue<string>();
+        private const int MAX_MESSAGES = 5;
 
         public GameScreen() : base(80, 37)
         {
@@ -161,6 +163,26 @@ namespace SobaRL.Game
         {
             // Clear the UI area and draw title
             this.Print(1, 0, "=== SOBA ROGUELIKE ===", SadRogue.Primitives.Color.Yellow);
+            
+            // Draw messages in the middle area (between map and player info)
+            int messageStartY = this.Height - 8;
+            int messageIndex = 0;
+            foreach (var message in _messageLog.Reverse().Take(5))
+            {
+                if (messageStartY + messageIndex < this.Height - 2)
+                {
+                    // Clear the line first
+                    for (int x = 1; x < this.Width - 1; x++)
+                    {
+                        this.SetGlyph(x, messageStartY + messageIndex, ' ');
+                    }
+                    
+                    // Truncate message if too long
+                    var displayMessage = message.Length > 70 ? message.Substring(0, 67) + "..." : message;
+                    this.Print(1, messageStartY + messageIndex, displayMessage, SadRogue.Primitives.Color.LightGray);
+                }
+                messageIndex++;
+            }
             
             // Only show player info if we have a valid player champion
             if (_gameEngine.PlayerChampion != null)
@@ -311,7 +333,20 @@ namespace SobaRL.Game
 
         private void OnGameMessage(string message)
         {
-            // Could implement a message log here
+            // Add message to the log
+            _messageLog.Enqueue(message);
+            
+            // Keep only the last MAX_MESSAGES messages
+            while (_messageLog.Count > MAX_MESSAGES)
+            {
+                _messageLog.Dequeue();
+            }
+            
+            // Update the display to show new message
+            if (_championSelected)
+            {
+                UpdateDisplay();
+            }
         }
 
         private void OnGameStateChanged(GameState newState)
