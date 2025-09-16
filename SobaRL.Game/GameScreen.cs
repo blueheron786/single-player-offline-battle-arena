@@ -188,7 +188,7 @@ namespace SobaRL.Game
                     {
                         color = unit.Team switch
                         {
-                            Team.Player => SadRogue.Primitives.Color.Blue,
+                            Team.Player => SadRogue.Primitives.Color.Cyan,
                             Team.Enemy => SadRogue.Primitives.Color.Red,
                             Team.Neutral => SadRogue.Primitives.Color.Yellow,
                             _ => SadRogue.Primitives.Color.White
@@ -248,7 +248,7 @@ namespace SobaRL.Game
                 int bottomRow = this.Height - 1;
                 this.Print(1, bottomRow, $"{player.Name} Lv.{player.Level}", SadRogue.Primitives.Color.White);
                 this.Print(20, bottomRow, $"HP: {player.CurrentHealth}/{player.MaxHealth}", SadRogue.Primitives.Color.Red);
-                this.Print(35, bottomRow, $"MP: {player.CurrentMana}/{player.MaxMana}", SadRogue.Primitives.Color.Blue);
+                this.Print(35, bottomRow, $"MP: {player.CurrentMana}/{player.MaxMana}", SadRogue.Primitives.Color.Cyan);
                 
                 // Skills
                 this.Print(50, bottomRow, "Skills:", SadRogue.Primitives.Color.Yellow);
