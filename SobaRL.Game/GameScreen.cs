@@ -188,7 +188,8 @@ namespace SobaRL.Game
                         color = displayChar switch
                         {
                             '#' => SadRogue.Primitives.Color.Gray,      // Walls
-                            '~' => SadRogue.Primitives.Color.Blue,      // River
+                            '~' => SadRogue.Primitives.Color.Blue,      // River/Water
+                            '=' => SadRogue.Primitives.Color.Brown,     // Bridge
                             '.' => SadRogue.Primitives.Color.DarkGray,  // Ground
                             _ => SadRogue.Primitives.Color.White
                         };

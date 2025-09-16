@@ -6,7 +6,8 @@ namespace SobaRL.Core.Models
         Wall,
         Lane,
         Jungle,
-        Base
+        Base,
+        Water
     }
 
     public class MapCell
@@ -14,7 +15,7 @@ namespace SobaRL.Core.Models
         public CellType Type { get; set; }
         public Unit? Occupant { get; set; }
         public char DisplayChar { get; set; }
-        public bool IsWalkable => Type != CellType.Wall && Occupant == null;
+        public bool IsWalkable => Type != CellType.Wall && Type != CellType.Water && Occupant == null;
 
         public MapCell(CellType type, char displayChar = '.')
         {
@@ -112,13 +113,13 @@ namespace SobaRL.Core.Models
             
             while (true)
             {
-                // Make river 2-3 cells wide
-                for (int i = -1; i <= 1; i++)
+                // Make river 3-4 cells wide with impassable water
+                for (int i = -2; i <= 1; i++)
                 {
                     int riverX = x + i;
                     if (IsValidPosition(new Position(riverX, y)))
                     {
-                        Cells[riverX, y] = new MapCell(CellType.Empty, '~'); // River is walkable
+                        Cells[riverX, y] = new MapCell(CellType.Water, '~'); // Water is impassable
                     }
                 }
                 
@@ -134,6 +135,28 @@ namespace SobaRL.Core.Models
                 {
                     error += dx;
                     y += yStep;
+                }
+            }
+            
+            // Add a bridge in the middle of the map (3 characters wide)
+            CreateBridge();
+        }
+
+        private void CreateBridge()
+        {
+            // Find the center point where the river crosses
+            int centerX = Width / 2;
+            int centerY = Height / 2;
+            
+            // Create a 3-wide bridge crossing the river
+            for (int bridgeX = centerX - 1; bridgeX <= centerX + 1; bridgeX++)
+            {
+                for (int bridgeY = centerY - 1; bridgeY <= centerY + 1; bridgeY++)
+                {
+                    if (IsValidPosition(new Position(bridgeX, bridgeY)))
+                    {
+                        Cells[bridgeX, bridgeY] = new MapCell(CellType.Lane, '='); // Bridge is walkable
+                    }
                 }
             }
         }
